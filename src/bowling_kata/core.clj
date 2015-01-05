@@ -31,6 +31,7 @@
         subsequent-frames
         (map #(.rolls %))
         flatten
+        (take 2)
         (reduce +))))
   (isFull [this] true))
 
@@ -44,25 +45,44 @@
       (> 10 (.score this []))
       (<= 2 (count (:m-rolls this)))))))
 
-(defn create-frame [pins]
-  (if (= 10 pins)
-    (->StrikeFrame)
-    (->SimpleFrame [pins])))
-
 (defn create-multi-roll-frame [existing-frame pins]
   (let [first-roll (first (.rolls existing-frame))]
     (if (= 10 (+ first-roll pins))
       (->SpareFrame [first-roll pins])
       (->SimpleFrame [first-roll pins]))))
 
-(defn roll-2 [state pins]
+(defn create-new-frame [pins frame-count]
+  (if (= 9 frame-count)
+    (->FinalFrame [pins])
+    (if (= 10 pins)
+    (->StrikeFrame)
+    (->SimpleFrame [pins]))))
+
+(defn append-to-frame [pins frame]
+  (let [first-roll (first (.rolls frame))]
+    (if (instance? FinalFrame frame)
+      (->FinalFrame (conj (.rolls frame) pins))
+      (if (= 10 (+ first-roll pins))
+        (->SpareFrame [first-roll pins])
+        (->SimpleFrame [first-roll pins])))))
+
+
+(defn roll [state pins]
   (let [
         last-frame (last state)
         frame-count (count state)]
-  (if (= 9 frame-count)
-    (conj state (->FinalFrame [pins]))
-      (if (and last-frame (not (.isFull last-frame)))
-        (conj (subvec state 0 (- frame-count 1))
-              (create-multi-roll-frame last-frame pins))
-        (conj state (create-frame pins))))))
+  (if (and last-frame (not (.isFull last-frame)))
+    (conj (subvec state 0 (- frame-count 1))
+          (append-to-frame pins last-frame))
+    (conj state (create-new-frame pins frame-count)))))
 
+(defn- -score [game-state score]
+  (if (empty? game-state)
+    score
+    (let [frame (first game-state)
+          later-frames (rest game-state)]
+      (recur later-frames
+             (+ score (.score frame later-frames))))))
+
+(defn score [game-state]
+  (-score game-state 0))

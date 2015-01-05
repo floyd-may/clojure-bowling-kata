@@ -34,6 +34,10 @@
   (it "handles zero subsequent rolls"
     (should= 10 (.score @frame [])))
 
+  (it "handles three subsequent rolls"
+    (should= 15 (.score @frame [(core/->SimpleFrame [2 3])
+                                (core/->SimpleFrame [8])])))
+
   (it "handles one subsequent roll"
     (should= 11 (.score @frame [(core/->SimpleFrame [1])]))))
 
@@ -57,7 +61,7 @@
           (it (str "returns " isfull " from isFull")
             (should= isfull (.isFull frame))))))))
 
-(describe "roll-2 function"
+(describe "roll function"
   (let [test-cases [[[8]  [(core/->SimpleFrame [8])]]
                     [[8 1]  [(core/->SimpleFrame [8 1])]]
                     [[8 1 7]  [(core/->SimpleFrame [8 1])
@@ -66,7 +70,7 @@
                     [[10]  [(core/->StrikeFrame)]]
                     ]]
     (for [[rolls expected-state] test-cases]
-      (let [actual-state (reduce core/roll-2 [] rolls)]
+      (let [actual-state (reduce core/roll [] rolls)]
         (it (str "with rolls " rolls)
           (should=
             expected-state
@@ -78,16 +82,35 @@
       10
       (repeat (core/->SimpleFrame [0 0])))))
 
-(describe "roll-2 function, final frame"
+(describe "roll function, final frame"
   (let [first-rolls (vec (take 9 gutter-game))
-        test-cases [[[7] (core/->FinalFrame [7])]
-                    [[7 2] (core/->FinalFrame [7 2])]]]
-    (for [[rolls expected-frame] test-cases]
-      (let [game-state (reduce core/roll-2 first-rolls rolls)]
+        test-cases [[[7] (core/->FinalFrame [7]) false]
+                    [[7 2] (core/->FinalFrame [7 2]) true]
+                    [[7 3] (core/->FinalFrame [7 3]) false]
+                    [[7 3 4] (core/->FinalFrame [7 3 4]) true]]]
+    (for [[rolls expected-frame isFull] test-cases]
+      (let [game-state (reduce core/roll first-rolls rolls)]
 
-        (it (str "with rolls " rolls) 
-          (should=
-            expected-frame
-            (last game-state)))))))
+        (describe (str "with rolls " rolls) 
+          (it (str "has final frame of "
+                   rolls)
+            (should=
+              expected-frame
+              (last game-state)))
+          (it (str "has isFull property of " isFull)
+            (should= isFull (-> game-state last .isFull))))))))
+
+(describe "score function"
+  (let [test-cases [
+        [(reduce core/roll [] (take 20 (repeat 0)))
+         "gutter game"
+         0]
+        [(reduce core/roll [] (take 12 (repeat 10)))
+         "perfect game"
+         300]]]
+    (for [[game-state description expected-score] test-cases]
+      (describe description
+        (it (str "has score of " expected-score)
+          (should= expected-score (core/score game-state)))))))
 
 (run-specs)
