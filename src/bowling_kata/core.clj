@@ -30,11 +30,11 @@
   (reduce + (vals frame)))
 (defmethod frame-score StrikeFrame [frame later-frames]
   (let [later-rolls (flatten (map vals later-frames))]
+   (+ 10 (reduce + (take 2 later-rolls)))))
 (defmethod frame-score SpareFrame [frame later-frames]
   (let [later-rolls (flatten (map vals later-frames))]
     (+ 10 (first later-rolls))))
 
-   (+ 10 (reduce + (take 2 later-rolls)))))
 
 (defn- -score [tmp-score game]
   (let [frames (:closed-frames game)]
